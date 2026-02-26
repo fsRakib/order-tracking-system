@@ -1,8 +1,10 @@
 # Binaries
-**/stock-service-bin
-**/order-service-bin
-**/analytics-service-bin
-**/*-service
+stock-service-bin
+order-service-bin
+analytics-service-bin
+stock-service/stock-service
+order-service/order-service
+analytics-service/analytics-service
 
 # Environment variables
 **/.env
