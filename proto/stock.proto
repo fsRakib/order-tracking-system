@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package stock;
+
+option go_package = "./pb/stock";
+
+service StockService {
+  rpc ReserveStock(ReserveStockRequest) returns (ReserveStockResponse);
+  rpc ReleaseStock(ReleaseStockRequest) returns (ReleaseStockResponse);
+  rpc GetStock(GetStockRequest) returns (GetStockResponse);
+}
+
+message ReserveStockRequest {
+  string sku = 1;
+  int32 quantity = 2;
+}
+
+message ReserveStockResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ReleaseStockRequest {
+  string sku = 1;
+  int32 quantity = 2;
+}
+
+message ReleaseStockResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetStockRequest {
+  string sku = 1;
+}
+
+message GetStockResponse {
+  string sku = 1;
+  int32 quantity = 2;
+}

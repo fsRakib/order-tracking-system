@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "./pb/order";
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder(GetOrderRequest) returns (OrderResponse);
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (OrderResponse);
+  rpc GetOrdersByCustomer(GetOrdersByCustomerRequest) returns (OrderListResponse);
+}
+
+// ─── CreateOrder ───────────────────────────────────────────
+message OrderItem {
+  string sku = 1;
+  int32 quantity = 2;
+  double unit_price = 3;
+}
+
+message CreateOrderRequest {
+  string customer_id = 1;
+  repeated OrderItem items = 2;
+}
+
+message CreateOrderResponse {
+  string order_id = 1;
+  string status = 2;
+  string message = 3;
+}
+
+// ─── GetOrder ──────────────────────────────────────────────
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+// ─── UpdateOrderStatus ─────────────────────────────────────
+message UpdateOrderStatusRequest {
+  string order_id = 1;
+  string status = 2;
+}
+
+// ─── GetOrdersByCustomer ───────────────────────────────────
+message GetOrdersByCustomerRequest {
+  string customer_id = 1;
+}
+
+// ─── Shared Response Messages ──────────────────────────────
+message OrderItemResponse {
+  string sku = 1;
+  int32 quantity = 2;
+  double unit_price = 3;
+}
+
+message OrderResponse {
+  string order_id = 1;
+  string customer_id = 2;
+  string status = 3;
+  double total_amount = 4;
+  string created_at = 5;
+  repeated OrderItemResponse items = 6;
+}
+
+message OrderListResponse {
+  repeated OrderResponse orders = 1;
+}
