@@ -63,7 +63,14 @@ func (s *OrderServer) CreateOrder(ctx context.Context, req *orderpb.CreateOrderR
 	}
 	log.Printf("order saved to database: %s", orderID)
 
-	// Step 4: Publish OrderCreated event to RabbitMQ asynchronously
+	// Step 4: Fetch customer name
+	customerName, err := db.GetCustomerName(req.CustomerId)
+	if err != nil {
+		log.Printf("warning: failed to fetch customer name: %v", err)
+		customerName = "" // Continue with empty name if fetch fails
+	}
+
+	// Step 5: Publish OrderCreated event to RabbitMQ asynchronously
 	go func() {
 		var eventItems []publisher.OrderItem
 		for _, item := range req.Items {
@@ -75,11 +82,12 @@ func (s *OrderServer) CreateOrder(ctx context.Context, req *orderpb.CreateOrderR
 		}
 
 		publisher.PublishOrderCreated(publisher.OrderEvent{
-			OrderID:     orderID,
-			CustomerID:  req.CustomerId,
-			Status:      "confirmed",
-			TotalAmount: totalAmount,
-			Items:       eventItems,
+			OrderID:      orderID,
+			CustomerID:   req.CustomerId,
+			CustomerName: customerName,
+			Status:       "confirmed",
+			TotalAmount:  totalAmount,
+			Items:        eventItems,
 		})
 	}()
 

@@ -14,6 +14,7 @@ var conn *amqp.Connection
 type OrderEvent struct {
 	OrderID      string      `json:"order_id"`
 	CustomerID   string      `json:"customer_id"`
+	CustomerName string      `json:"customer_name"`
 	Status       string      `json:"status"`
 	TotalAmount  float64     `json:"total_amount"`
 	Items        []OrderItem `json:"items"`

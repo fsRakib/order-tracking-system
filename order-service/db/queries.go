@@ -116,6 +116,19 @@ func UpdateOrderStatus(orderID, status string) (*Order, error) {
 	return GetOrderByID(orderID)
 }
 
+// GetCustomerName fetches the customer name by ID
+func GetCustomerName(customerID string) (string, error) {
+	var name string
+	err := DB.QueryRow(`SELECT name FROM customers WHERE id = $1`, customerID).Scan(&name)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("customer not found: %s", customerID)
+		}
+		return "", fmt.Errorf("query error: %v", err)
+	}
+	return name, nil
+}
+
 // getOrderItems is a helper to fetch items for a given order
 func getOrderItems(orderID string) ([]OrderItem, error) {
 	rows, err := DB.Query(
