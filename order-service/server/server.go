@@ -117,6 +117,34 @@ func (s *OrderServer) UpdateOrderStatus(ctx context.Context, req *orderpb.Update
 		return nil, err
 	}
 
+	// Fetch customer name
+	customerName, err := db.GetCustomerName(order.CustomerID)
+	if err != nil {
+		log.Printf("warning: failed to fetch customer name: %v", err)
+		customerName = "" // Continue with empty name if fetch fails
+	}
+
+	// Publish OrderUpdated event to RabbitMQ asynchronously
+	go func() {
+		var eventItems []publisher.OrderItem
+		for _, item := range order.Items {
+			eventItems = append(eventItems, publisher.OrderItem{
+				SKU:       item.SKU,
+				Quantity:  item.Quantity,
+				UnitPrice: item.UnitPrice,
+			})
+		}
+
+		publisher.PublishOrderUpdated(publisher.OrderEvent{
+			OrderID:      order.ID,
+			CustomerID:   order.CustomerID,
+			CustomerName: customerName,
+			Status:       order.Status,
+			TotalAmount:  order.TotalAmount,
+			Items:        eventItems,
+		})
+	}()
+
 	return toOrderResponse(order), nil
 }
 

@@ -19,6 +19,7 @@ type IncomingOrderEvent struct {
 	Status       string      `json:"status"`
 	TotalAmount  float64     `json:"total_amount"`
 	Items        []OrderItem `json:"items"`
+	CreatedAt    string      `json:"created_at,omitempty"`
 }
 
 type OrderItem struct {
@@ -95,6 +96,7 @@ func StartConsumer() {
 		log.Printf("received order event: %s", event.OrderID)
 
 		// Convert to Elasticsearch document
+		// Note: IndexOrder will create new documents or update existing ones by OrderID
 		var esItems []elastic.OrderItem
 		for _, item := range event.Items {
 			esItems = append(esItems, elastic.OrderItem{
@@ -104,6 +106,12 @@ func StartConsumer() {
 			})
 		}
 
+		// Use event's CreatedAt if provided, otherwise use current time
+		createdAt := event.CreatedAt
+		if createdAt == "" {
+			createdAt = time.Now().UTC().Format(time.RFC3339)
+		}
+
 		doc := elastic.OrderDocument{
 			OrderID:      event.OrderID,
 			CustomerID:   event.CustomerID,
@@ -111,7 +119,7 @@ func StartConsumer() {
 			Status:       event.Status,
 			TotalAmount:  event.TotalAmount,
 			Items:        esItems,
-			CreatedAt:    time.Now().UTC().Format(time.RFC3339),
+			CreatedAt:    createdAt,
 		}
 
 		if err := elastic.IndexOrder(doc); err != nil {

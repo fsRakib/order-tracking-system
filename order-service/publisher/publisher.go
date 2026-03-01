@@ -87,3 +87,50 @@ func PublishOrderCreated(event OrderEvent) {
 
 	log.Printf("published OrderCreated event for order: %s", event.OrderID)
 }
+
+func PublishOrderUpdated(event OrderEvent) {
+	ch, err := conn.Channel()
+	if err != nil {
+		log.Printf("failed to open channel: %v", err)
+		return
+	}
+	defer ch.Close()
+
+	// Declare a fanout exchange so multiple consumers can receive the event
+	err = ch.ExchangeDeclare(
+		"order.events", // name
+		"fanout",       // type
+		true,           // durable
+		false,          // auto-deleted
+		false,          // internal
+		false,          // no-wait
+		nil,            // arguments
+	)
+	if err != nil {
+		log.Printf("failed to declare exchange: %v", err)
+		return
+	}
+
+	body, err := json.Marshal(event)
+	if err != nil {
+		log.Printf("failed to marshal event: %v", err)
+		return
+	}
+
+	err = ch.Publish(
+		"order.events", // exchange
+		"",             // routing key (empty for fanout)
+		false,          // mandatory
+		false,          // immediate
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        body,
+		},
+	)
+	if err != nil {
+		log.Printf("failed to publish event: %v", err)
+		return
+	}
+
+	log.Printf("published OrderUpdated event for order: %s", event.OrderID)
+}
