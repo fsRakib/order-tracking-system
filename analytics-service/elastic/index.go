@@ -35,7 +35,12 @@ func createIndexIfNotExists() {
 			"properties": {
 				"order_id":      { "type": "keyword" },
 				"customer_id":   { "type": "keyword" },
-				"customer_name": { "type": "text" },
+				"customer_name": { 
+					"type": "text",
+					"fields": {
+						"keyword": { "type": "keyword" }
+					}
+				},
 				"status":        { "type": "keyword" },
 				"total_amount":  { "type": "float" },
 				"created_at":    { "type": "date" },
@@ -105,8 +110,11 @@ func SearchOrders(customerName, sku, status string) ([]OrderDocument, error) {
 
 	if customerName != "" {
 		mustClauses = append(mustClauses, map[string]interface{}{
-			"match": map[string]interface{}{
-				"customer_name": customerName,
+			"wildcard": map[string]interface{}{
+				"customer_name.keyword": map[string]interface{}{
+					"value":            "*" + customerName + "*",
+					"case_insensitive": true,
+				},
 			},
 		})
 	}
