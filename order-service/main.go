@@ -5,11 +5,14 @@ import (
 	"net"
 	"os"
 
-	"order-service/client"
+	"order-service/application/command"
+	"order-service/application/query"
 	"order-service/db"
+	grpcclient "order-service/infrastructure/grpc_client"
+	"order-service/infrastructure/messaging"
+	"order-service/infrastructure/persistence"
+	grpchandler "order-service/interface/grpc"
 	orderpb "order-service/pb/order"
-	"order-service/publisher"
-	"order-service/server"
 
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
@@ -22,16 +25,57 @@ func main() {
 		log.Println("no .env file found, reading from environment")
 	}
 
+	// ---- Infrastructure: Connect to external systems ----
+
 	// Connect to PostgreSQL
 	db.Connect()
 
 	// Connect to Stock Service via gRPC
-	client.ConnectStockService()
+	stockServiceAddr := os.Getenv("STOCK_SERVICE_ADDR")
+	stockService, err := grpcclient.NewStockGRPCClient(stockServiceAddr)
+	if err != nil {
+		log.Fatalf("failed to connect to stock service: %v", err)
+	}
 
 	// Connect to RabbitMQ
-	publisher.Connect()
+	rabbitURL := os.Getenv("RABBITMQ_URL")
+	rabbitConn, err := messaging.Connect(rabbitURL)
+	if err != nil {
+		log.Fatalf("failed to connect to RabbitMQ: %v", err)
+	}
 
-	// Start gRPC server
+	// ---- Infrastructure: Create implementations ----
+
+	orderRepo := persistence.NewPostgresOrderRepository(db.DB)
+	customerService := persistence.NewPostgresCustomerService(db.DB)
+	eventPublisher := messaging.NewRabbitMQPublisher(rabbitConn)
+
+	// ---- Application: Create use case handlers ----
+
+	createOrderHandler := command.NewCreateOrderHandler(
+		orderRepo,
+		stockService,
+		customerService,
+		eventPublisher,
+	)
+	updateOrderStatusHandler := command.NewUpdateOrderStatusHandler(
+		orderRepo,
+		eventPublisher,
+	)
+	getOrderHandler := query.NewGetOrderHandler(orderRepo)
+	getOrdersByCustomerHandler := query.NewGetOrdersByCustomerHandler(orderRepo)
+
+	// ---- Interface: Create gRPC handler ----
+
+	orderHandler := grpchandler.NewOrderHandler(
+		createOrderHandler,
+		updateOrderStatusHandler,
+		getOrderHandler,
+		getOrdersByCustomerHandler,
+	)
+
+	// ---- Start gRPC server ----
+
 	port := os.Getenv("GRPC_PORT")
 	if port == "" {
 		port = "50051"
@@ -43,7 +87,7 @@ func main() {
 	}
 
 	grpcServer := grpc.NewServer()
-	orderpb.RegisterOrderServiceServer(grpcServer, &server.OrderServer{})
+	orderpb.RegisterOrderServiceServer(grpcServer, orderHandler)
 	reflection.Register(grpcServer)
 
 	log.Printf("order service running on port %s", port)
