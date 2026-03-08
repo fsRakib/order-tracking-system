@@ -11,6 +11,7 @@ This project serves as a practical learning platform to understand:
 - **RabbitMQ** - Message broker for event-driven architecture
 - **PostgreSQL** - Relational database management
 - **Microservices** - Distributed system design and implementation
+- **Domain-Driven Design (DDD)** - Structuring code around business domains with aggregates, value objects, domain events, and the ports-and-adapters pattern
 
 ---
 
@@ -233,63 +234,129 @@ RESULT: Order Analytics Now Searchable!
 ```
 order-tracking-system/
 │
-├── order-service/              # Microservice #1: Order Management
-│   ├── main.go                 # Entry point
+├── order-service/              # Microservice #1: Order Management (DDD)
+│   ├── main.go                 # Composition root - wires all dependencies
 │   ├── Dockerfile              # Docker build configuration
-│   ├── .dockerignore           # Docker ignore patterns
-│   ├── server/                 # gRPC server implementation
-│   │   └── server.go           # 4 gRPC methods
-│   ├── client/                 # gRPC client for Stock Service
-│   │   └── stock_client.go     # Communicates with Stock Service
-│   ├── publisher/              # RabbitMQ publisher
-│   │   └── publisher.go        # Publishes order events
-│   ├── db/                     # PostgreSQL integration
-│   │   ├── db.go               # Database connection
-│   │   ├── queries.go          # SQL queries
-│   │   └── schema.sql          # Database schema
-│   ├── pb/                     # Generated Protocol Buffer code
-│   │   ├── order/              # Order service protobuf
-│   │   └── stock/              # Stock service protobuf
-│   └── .env                    # Configuration
+│   ├── go.mod                  # Go module definition
+│   │
+│   ├── domain/                 # Core business logic - no external dependencies
+│   │   ├── aggregate/
+│   │   │   ├── order.go        # Order aggregate root (business rules)
+│   │   │   └── order_item.go   # Order item entity
+│   │   ├── valueobject/
+│   │   │   ├── order_id.go     # UUID-based order identity
+│   │   │   ├── customer_id.go  # Validated customer identifier
+│   │   │   ├── order_status.go # Status enum with transition rules
+│   │   │   ├── money.go        # Monetary value (stored as cents)
+│   │   │   └── sku.go          # Stock keeping unit identifier
+│   │   ├── event/
+│   │   │   └── order_events.go # Domain events (OrderCreated, StatusUpdated)
+│   │   └── repository/
+│   │       └── order_repository.go  # Repository interface (port)
+│   │
+│   ├── application/            # Use cases - orchestrates domain objects
+│   │   ├── command/
+│   │   │   ├── create_order.go         # CreateOrder use case handler
+│   │   │   └── update_order_status.go  # UpdateOrderStatus use case handler
+│   │   ├── query/
+│   │   │   └── order_queries.go  # GetOrder, GetOrdersByCustomer handlers
+│   │   ├── dto/
+│   │   │   └── order_dto.go      # Data transfer objects (layer boundary)
+│   │   └── port/
+│   │       ├── event_publisher.go  # EventPublisher interface
+│   │       ├── stock_service.go    # StockService interface
+│   │       └── customer_service.go # CustomerService interface
+│   │
+│   ├── infrastructure/         # Concrete implementations of interfaces
+│   │   ├── persistence/
+│   │   │   ├── postgres_order_repository.go    # SQL implementation
+│   │   │   └── postgres_customer_service.go    # SQL implementation
+│   │   ├── messaging/
+│   │   │   └── rabbitmq_publisher.go  # RabbitMQ event publishing
+│   │   └── grpc_client/
+│   │       └── stock_grpc_client.go   # gRPC call to stock-service
+│   │
+│   ├── interface/              # Delivery layer - adapts external protocols
+│   │   └── grpc/
+│   │       └── order_handler.go  # Thin gRPC handler, delegates to application
+│   │
+│   └── db/
+│       ├── db.go               # Database connection
+│       └── schema.sql          # Database schema (customers, orders, order_items)
 │
 ├── stock-service/              # Microservice #2: Stock Management
 │   ├── main.go                 # Entry point
 │   ├── Dockerfile              # Docker build configuration
-│   ├── .dockerignore           # Docker ignore patterns
-│   ├── server/                 # gRPC server implementation
-│   │   └── server.go           # 3 gRPC methods
-│   ├── consumer/               # RabbitMQ consumer
-│   │   └── consumer.go         # Listens to order events
-│   ├── db/                     # PostgreSQL integration
-│   │   ├── db.go               # Database connection
-│   │   ├── queries.go          # SQL queries
-│   │   └── schema.sql          # Stock table schema
-│   ├── pb/                     # Generated Protocol Buffer code
-│   │   └── stock/              # Stock service protobuf
-│   └── .env                    # Configuration
+│   ├── server/
+│   │   └── server.go           # gRPC server (3 methods)
+│   ├── consumer/
+│   │   └── consumer.go         # Consumes order.cancelled events
+│   └── db/
+│       ├── db.go               # Database connection
+│       ├── queries.go          # SQL queries
+│       └── schema.sql          # stocks table schema
 │
 ├── analytics-service/          # Microservice #3: Analytics & Search
 │   ├── main.go                 # Entry point
 │   ├── Dockerfile              # Docker build configuration
-│   ├── .dockerignore           # Docker ignore patterns
-│   ├── api/                    # HTTP REST handlers
-│   │   └── handler.go          # 4 REST endpoints
-│   ├── consumer/               # RabbitMQ consumer
-│   │   └── consumer.go         # Listens to order events
-│   ├── elastic/                # Elasticsearch integration
-│   │   ├── client.go           # ES connection
-│   │   └── index.go            # Indexing operations
-│   └── .env                    # Configuration
+│   ├── api/
+│   │   └── handler.go          # HTTP REST handlers (4 endpoints)
+│   ├── consumer/
+│   │   └── consumer.go         # Consumes order events, indexes to ES
+│   └── elastic/
+│       ├── client.go           # Elasticsearch connection
+│       └── index.go            # Indexing operations
 │
-├── proto/                      # Protocol Buffer Definitions
-│   ├── order.proto             # Order service API schema
-│   └── stock.proto             # Stock service API schema
+├── pb/                         # Shared generated Protocol Buffer code
+│   ├── go.mod                  # Standalone Go module (order-tracking-system/pb)
+│   ├── order/                  # Order service generated code
+│   │   ├── order.pb.go
+│   │   └── order_grpc.pb.go
+│   └── stock/                  # Stock service generated code
+│       ├── stock.pb.go
+│       └── stock_grpc.pb.go
 │
-├── docker compose.yml          # 🐳 Docker orchestration (ALL services)
-├── docker-manager.sh           # 🎮 Interactive Docker management script
-├── test-all-endpoints.sh       # Automated test script
+├── proto/                      # Protocol Buffer source definitions
+│   ├── order.proto
+│   └── stock.proto
+│
+├── go.work                     # Go workspace (links all 4 modules)
+├── docker-compose.yml          # Docker orchestration (all services)
 └── README.md                   # This file
 ```
+
+---
+
+## 🏛️ Domain-Driven Design Architecture (order-service)
+
+The `order-service` is fully refactored using **DDD** with a **Ports and Adapters** (Hexagonal) pattern. Think of it in layers:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  interface/grpc/                    │  gRPC handler (thin adapter)
+│   Converts proto ↔ DTO, delegates to application   │
+├─────────────────────────────────────────────────────┤
+│                  application/                       │  Use cases (commands + queries)
+│   Orchestrates domain objects, calls port interfaces│
+├─────────────────────────────────────────────────────┤
+│                    domain/                          │  Pure business logic
+│   Aggregates, value objects, events, repo interfaces│
+├─────────────────────────────────────────────────────┤
+│                 infrastructure/                     │  Technical implementations
+│   Postgres, RabbitMQ, gRPC client (implements ports)│
+└─────────────────────────────────────────────────────┘
+```
+
+**Key DDD Concepts Applied:**
+
+| Concept | Implementation | Purpose |
+|---|---|---|
+| Aggregate Root | `Order` in `domain/aggregate/order.go` | Single entry point for all order mutations |
+| Value Objects | `Money`, `OrderID`, `OrderStatus`, `SKU` | Immutable, self-validating domain concepts |
+| Domain Events | `OrderCreatedEvent`, `OrderStatusUpdatedEvent` | Decouple side effects from business logic |
+| Repository | `OrderRepository` interface in `domain/repository/` | Abstracts persistence from domain |
+| Ports | Interfaces in `application/port/` | Define what the app needs without how |
+| Adapters | Everything in `infrastructure/` | Concrete implementations of port interfaces |
 
 ---
 

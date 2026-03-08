@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"order-service/application/port"
-	stockpb "order-service/pb/stock"
+	stockpb "order-tracking-system/pb/stock"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

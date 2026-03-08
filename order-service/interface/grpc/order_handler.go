@@ -7,7 +7,7 @@ import (
 	"order-service/application/command"
 	"order-service/application/dto"
 	"order-service/application/query"
-	orderpb "order-service/pb/order"
+	orderpb "order-tracking-system/pb/order"
 )
 
 // OrderHandler is the gRPC server handler for the Order service

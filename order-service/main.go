@@ -12,7 +12,7 @@ import (
 	"order-service/infrastructure/messaging"
 	"order-service/infrastructure/persistence"
 	grpchandler "order-service/interface/grpc"
-	orderpb "order-service/pb/order"
+	orderpb "order-tracking-system/pb/order"
 
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
