@@ -28,8 +28,9 @@ type OrderItem struct {
 	UnitPrice float64 `json:"unit_price"`
 }
 
-// createIndexIfNotExists creates the orders index with proper field mappings
-func createIndexIfNotExists() {
+// createIndexIfNotExists creates the orders index with proper field mappings.
+// Returns true if the index was freshly created (caller should trigger a sync).
+func createIndexIfNotExists() bool {
 	mapping := `{
 		"mappings": {
 			"properties": {
@@ -73,9 +74,11 @@ func createIndexIfNotExists() {
 		}
 		defer createRes.Body.Close()
 		log.Printf("created Elasticsearch index: %s", indexName)
-	} else {
-		log.Printf("Elasticsearch index already exists: %s", indexName)
+		return true // freshly created — caller should sync historical data
 	}
+
+	log.Printf("Elasticsearch index already exists: %s", indexName)
+	return false
 }
 
 // IndexOrder stores an order document in Elasticsearch
