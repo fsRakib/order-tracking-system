@@ -11,14 +11,20 @@ type OrderItem struct {
 	unitPrice valueobject.Money
 }
 
-// newOrderItem is a package-private constructor
-// Only the Order aggregate can create OrderItems (enforces encapsulation)
+// newOrderItem is a package-private constructor used by Order.AddItem()
 func newOrderItem(sku valueobject.SKU, quantity int32, unitPrice valueobject.Money) OrderItem {
 	return OrderItem{
 		sku:       sku,
 		quantity:  quantity,
 		unitPrice: unitPrice,
 	}
+}
+
+// NewOrderItem is a public constructor used only by the repository layer
+// when reconstructing an Order aggregate from database rows.
+// Do NOT use this in application or domain logic - use Order.AddItem() instead.
+func NewOrderItem(sku valueobject.SKU, quantity int32, unitPrice valueobject.Money) OrderItem {
+	return newOrderItem(sku, quantity, unitPrice)
 }
 
 // SKU returns the product SKU
