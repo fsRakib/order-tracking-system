@@ -42,7 +42,7 @@ LABEL maintainer="Order Tracking System" \
       version="1.0"
 
 # Install runtime dependencies
-RUN apk --no-cache add ca-certificates tzdata && \
+RUN apk --no-cache add ca-certificates tzdata netcat-openbsd && \
     # Create non-root user for security
     addgroup -g 1000 appgroup && \
     adduser -D -u 1000 -G appgroup appuser && \
@@ -61,9 +61,9 @@ USER appuser
 # Expose gRPC port
 EXPOSE 50051
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:50051 || exit 1
+# Health check - TCP probe (gRPC does not speak plain HTTP)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD nc -z localhost 50051 || exit 1
 
 # Run the application
 ENTRYPOINT ["./order-service"]

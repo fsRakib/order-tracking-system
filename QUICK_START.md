@@ -60,6 +60,7 @@ ON CONFLICT (sku) DO NOTHING;"
 ### 🔹 ORDER SERVICE (gRPC) - 4 Methods
 
 **1. CreateOrder**
+
 ```bash
 grpcurl -plaintext -d '{
   "customer_id": "CUST-001",
@@ -70,6 +71,7 @@ grpcurl -plaintext -d '{
 ```
 
 **2. GetOrder** (replace ORDER_ID with the one from CreateOrder response)
+
 ```bash
 grpcurl -plaintext -d '{
   "order_id": "YOUR_ORDER_ID_HERE"
@@ -77,6 +79,7 @@ grpcurl -plaintext -d '{
 ```
 
 **3. UpdateOrderStatus**
+
 ```bash
 grpcurl -plaintext -d '{
   "order_id": "YOUR_ORDER_ID_HERE",
@@ -85,6 +88,7 @@ grpcurl -plaintext -d '{
 ```
 
 **4. GetOrdersByCustomer**
+
 ```bash
 grpcurl -plaintext -d '{
   "customer_id": "CUST-001"
@@ -96,6 +100,7 @@ grpcurl -plaintext -d '{
 ### 🔹 STOCK SERVICE (gRPC) - 3 Methods
 
 **5. GetStock**
+
 ```bash
 grpcurl -plaintext -d '{
   "sku": "LAPTOP-001"
@@ -103,6 +108,7 @@ grpcurl -plaintext -d '{
 ```
 
 **6. ReserveStock**
+
 ```bash
 grpcurl -plaintext -d '{
   "sku": "MOUSE-001",
@@ -111,6 +117,7 @@ grpcurl -plaintext -d '{
 ```
 
 **7. ReleaseStock**
+
 ```bash
 grpcurl -plaintext -d '{
   "sku": "MOUSE-001",
@@ -123,26 +130,31 @@ grpcurl -plaintext -d '{
 ### 🔹 ANALYTICS SERVICE (HTTP REST) - 4 Endpoints
 
 **8. Search by Customer Name**
+
 ```bash
 curl -s "http://localhost:8081/search?customer=Rakib" | jq
 ```
 
 **9. Search by SKU**
+
 ```bash
 curl -s "http://localhost:8081/search?sku=LAPTOP-001" | jq
 ```
 
 **10. Aggregate by Status**
+
 ```bash
 curl -s "http://localhost:8081/aggregate/status" | jq
 ```
 
 **11. Aggregate by Customer**
+
 ```bash
 curl -s "http://localhost:8081/aggregate/customer" | jq
 ```
 
 **Bonus: Health Check**
+
 ```bash
 curl -s "http://localhost:8081/health" | jq
 ```

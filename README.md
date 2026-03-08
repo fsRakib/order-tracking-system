@@ -349,14 +349,14 @@ The `order-service` is fully refactored using **DDD** with a **Ports and Adapter
 
 **Key DDD Concepts Applied:**
 
-| Concept | Implementation | Purpose |
-|---|---|---|
-| Aggregate Root | `Order` in `domain/aggregate/order.go` | Single entry point for all order mutations |
-| Value Objects | `Money`, `OrderID`, `OrderStatus`, `SKU` | Immutable, self-validating domain concepts |
-| Domain Events | `OrderCreatedEvent`, `OrderStatusUpdatedEvent` | Decouple side effects from business logic |
-| Repository | `OrderRepository` interface in `domain/repository/` | Abstracts persistence from domain |
-| Ports | Interfaces in `application/port/` | Define what the app needs without how |
-| Adapters | Everything in `infrastructure/` | Concrete implementations of port interfaces |
+| Concept        | Implementation                                      | Purpose                                     |
+| -------------- | --------------------------------------------------- | ------------------------------------------- |
+| Aggregate Root | `Order` in `domain/aggregate/order.go`              | Single entry point for all order mutations  |
+| Value Objects  | `Money`, `OrderID`, `OrderStatus`, `SKU`            | Immutable, self-validating domain concepts  |
+| Domain Events  | `OrderCreatedEvent`, `OrderStatusUpdatedEvent`      | Decouple side effects from business logic   |
+| Repository     | `OrderRepository` interface in `domain/repository/` | Abstracts persistence from domain           |
+| Ports          | Interfaces in `application/port/`                   | Define what the app needs without how       |
+| Adapters       | Everything in `infrastructure/`                     | Concrete implementations of port interfaces |
 
 ---
 
