@@ -65,6 +65,20 @@ services:
     networks:
       - order-tracking-network
 
+  # Kibana - Elasticsearch UI (like DBeaver but for Elasticsearch)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: order-tracking-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - order-tracking-network
+
   # ==================== APPLICATION SERVICES ====================
 
   # Order Service (gRPC)
