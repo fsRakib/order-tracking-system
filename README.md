@@ -303,9 +303,11 @@ order-tracking-system/
 │   │   └── handler.go          # HTTP REST handlers (4 endpoints)
 │   ├── consumer/
 │   │   └── consumer.go         # Consumes order events, indexes to ES
+│   ├── db/
+│   │   └── sync.go             # Backfills historical orders into ES on startup
 │   └── elastic/
 │       ├── client.go           # Elasticsearch connection
-│       └── index.go            # Indexing operations
+│       └── index.go            # Indexing + index creation with mappings
 │
 ├── pb/                         # Shared generated Protocol Buffer code
 │   ├── go.mod                  # Standalone Go module (order-tracking-system/pb)
@@ -422,6 +424,13 @@ The `order-service` is fully refactored using **DDD** with a **Ports and Adapter
 - **Database:** Elasticsearch
 - **Features:** Search orders, aggregate statistics, health monitoring
 - **Events:** Consumes order events to index in Elasticsearch
+- **Startup Sync:** Automatically backfills all PostgreSQL orders into Elasticsearch if the index is missing
+
+### 4. Kibana
+
+- **Port:** 5601
+- **URL:** http://localhost:5601
+- **Purpose:** GUI to browse and query the Elasticsearch `orders` index (like DBeaver but for Elasticsearch)
 
 ## Prerequisites
 
@@ -480,6 +489,7 @@ docker compose ps
 # order-tracking-postgres            running   5433/tcp
 # order-tracking-rabbitmq            running   5673/tcp, 15673/tcp
 # order-tracking-elasticsearch       running   9201/tcp, 9301/tcp
+# order-tracking-kibana              running   5601/tcp
 # order-tracking-order-service       running   50061/tcp
 # order-tracking-stock-service       running   50062/tcp
 # order-tracking-analytics-service   running   8081/tcp
@@ -494,6 +504,7 @@ docker compose ps
 - **Analytics Service (HTTP):** `http://localhost:8081`
 - **RabbitMQ Management UI:** `http://localhost:15673` (admin/admin)
 - **Elasticsearch:** `http://localhost:9201`
+- **Kibana (Elasticsearch UI):** `http://localhost:5601`
 - **PostgreSQL:** `localhost:5433` (admin/admin)
 
 **Manual Setup Ports (default ports when running without Docker):**
@@ -666,8 +677,8 @@ grpcurl -plaintext -d '{
 ```json
 {
   "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "status": "pending",
-  "message": "Order created successfully"
+  "status": "confirmed",
+  "message": "order created successfully"
 }
 ```
 
@@ -939,12 +950,12 @@ curl -s "http://localhost:8081/aggregate/status" | jq
 
 ```json
 {
-  "aggregations": [
-    { "status": "pending", "count": 2 },
-    { "status": "shipped", "count": 3 },
-    { "status": "delivered", "count": 5 },
-    { "status": "confirmed", "count": 1 }
-  ]
+  "aggregation": "orders_by_status",
+  "data": {
+    "confirmed": 3,
+    "shipped": 1,
+    "delivered": 2
+  }
 }
 ```
 
@@ -964,15 +975,12 @@ curl -s "http://localhost:8081/aggregate/customer" | jq
 
 ```json
 {
-  "aggregations": [
-    {
-      "customer_id": "CUST-001",
-      "customer_name": "Md. Rakibul Kabir",
-      "count": 5
-    },
-    { "customer_id": "CUST-002", "customer_name": "Arka Das", "count": 3 },
-    { "customer_id": "CUST-003", "customer_name": "Morshed Alam", "count": 2 }
-  ]
+  "aggregation": "orders_by_customer",
+  "data": {
+    "CUST-001": 5,
+    "CUST-002": 3,
+    "CUST-003": 2
+  }
 }
 ```
 
@@ -1114,6 +1122,7 @@ GRPC_PORT=50052
 ```env
 ELASTICSEARCH_URL=http://localhost:9200
 RABBITMQ_URL=amqp://admin:admin@localhost:5672/
+DB_URL=postgres://admin:admin@localhost:5432/orders_db
 HTTP_PORT=8080
 ```
 
