@@ -1,62 +1,57 @@
-# Quick Start for Manager 🚀
+# Quick Start Guide
 
-> **Note:** This guide uses Docker Compose V2 (`docker compose` command). If you have the older version, install Docker Desktop or Docker Engine with Compose V2 plugin.
+> This guide uses Docker Compose V2 (`docker compose`). Install Docker Desktop or Docker Engine with Compose V2 plugin if not already available.
 
-## One-Command Setup (Easiest)
+## One-Command Setup
 
 ```bash
 # Navigate to project directory
 cd order-tracking-system
 
 # Start everything with Docker
-docker compose up --build
+docker compose up --build -d
 ```
 
-**That's it!** All services are now running.
+All 6 services start automatically.
 
 ---
 
 ## Verify Everything is Running
 
-Open a new terminal and run:
-
 ```bash
 docker compose ps
 ```
 
-You should see 6 containers running:
+Expected containers running:
 
-- ✅ order-tracking-postgres
-- ✅ order-tracking-rabbitmq
-- ✅ order-tracking-elasticsearch
-- ✅ order-tracking-order-service
-- ✅ order-tracking-stock-service
-- ✅ order-tracking-analytics-service
+- order-tracking-postgres
+- order-tracking-rabbitmq
+- order-tracking-elasticsearch
+- order-tracking-order-service
+- order-tracking-stock-service
+- order-tracking-analytics-service
 
 ---
 
 ## Insert Sample Data
 
 ```bash
-docker exec -it order-tracking-postgres psql -U admin -d orders_db
-```
-
-Then paste and run:
-
-```sql
+docker exec order-tracking-postgres psql -U admin -d orders_db -c "
 INSERT INTO customers (id, name) VALUES
 ('CUST-001', 'Md. Rakibul Kabir'),
 ('CUST-002', 'Arka Das'),
 ('CUST-003', 'Morshed Alam'),
-('CUST-004', 'Emran Ahmed Emon');
+('CUST-004', 'Emran Ahmed Emon')
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO stocks (sku, quantity) VALUES
 ('LAPTOP-001', 50),
 ('MOUSE-001', 100),
-('KEYBOARD-001', 75);
+('KEYBOARD-001', 75),
+('MONITOR-001', 30),
+('HEADSET-001', 60)
+ON CONFLICT (sku) DO NOTHING;"
 ```
-
-Type `\q` to exit.
 
 ---
 
@@ -65,6 +60,7 @@ Type `\q` to exit.
 ### 🔹 ORDER SERVICE (gRPC) - 4 Methods
 
 **1. CreateOrder**
+
 ```bash
 grpcurl -plaintext -d '{
   "customer_id": "CUST-001",
@@ -75,6 +71,7 @@ grpcurl -plaintext -d '{
 ```
 
 **2. GetOrder** (replace ORDER_ID with the one from CreateOrder response)
+
 ```bash
 grpcurl -plaintext -d '{
   "order_id": "YOUR_ORDER_ID_HERE"
@@ -82,6 +79,7 @@ grpcurl -plaintext -d '{
 ```
 
 **3. UpdateOrderStatus**
+
 ```bash
 grpcurl -plaintext -d '{
   "order_id": "YOUR_ORDER_ID_HERE",
@@ -90,6 +88,7 @@ grpcurl -plaintext -d '{
 ```
 
 **4. GetOrdersByCustomer**
+
 ```bash
 grpcurl -plaintext -d '{
   "customer_id": "CUST-001"
@@ -101,6 +100,7 @@ grpcurl -plaintext -d '{
 ### 🔹 STOCK SERVICE (gRPC) - 3 Methods
 
 **5. GetStock**
+
 ```bash
 grpcurl -plaintext -d '{
   "sku": "LAPTOP-001"
@@ -108,6 +108,7 @@ grpcurl -plaintext -d '{
 ```
 
 **6. ReserveStock**
+
 ```bash
 grpcurl -plaintext -d '{
   "sku": "MOUSE-001",
@@ -116,6 +117,7 @@ grpcurl -plaintext -d '{
 ```
 
 **7. ReleaseStock**
+
 ```bash
 grpcurl -plaintext -d '{
   "sku": "MOUSE-001",
@@ -128,26 +130,31 @@ grpcurl -plaintext -d '{
 ### 🔹 ANALYTICS SERVICE (HTTP REST) - 4 Endpoints
 
 **8. Search by Customer Name**
+
 ```bash
 curl -s "http://localhost:8081/search?customer=Rakib" | jq
 ```
 
 **9. Search by SKU**
+
 ```bash
 curl -s "http://localhost:8081/search?sku=LAPTOP-001" | jq
 ```
 
 **10. Aggregate by Status**
+
 ```bash
 curl -s "http://localhost:8081/aggregate/status" | jq
 ```
 
 **11. Aggregate by Customer**
+
 ```bash
 curl -s "http://localhost:8081/aggregate/customer" | jq
 ```
 
 **Bonus: Health Check**
+
 ```bash
 curl -s "http://localhost:8081/health" | jq
 ```
@@ -203,16 +210,4 @@ docker compose down
 
 ---
 
-## Need Help?
-
-Run the interactive manager:
-
-```bash
-./docker-manager.sh
-```
-
-This provides a menu for all operations.
-
----
-
-**Questions?** See the full README.md for detailed documentation.
+**For full documentation, architecture details, and DDD design explanation, see README.md.**

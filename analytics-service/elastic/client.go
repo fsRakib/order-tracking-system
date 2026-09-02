@@ -9,7 +9,9 @@ import (
 
 var Client *elasticsearch.Client
 
-func Connect() {
+// Connect establishes the Elasticsearch client, creates the index if needed,
+// and returns true if the index was freshly created (so caller can sync data).
+func Connect() bool {
 	url := os.Getenv("ELASTICSEARCH_URL")
 	if url == "" {
 		log.Fatal("ELASTICSEARCH_URL environment variable is not set")
@@ -34,6 +36,6 @@ func Connect() {
 
 	log.Println("connected to Elasticsearch successfully")
 
-	// Create index with mapping if it doesn't exist
-	createIndexIfNotExists()
+	// Create index with mapping if it doesn't exist; returns true if freshly created
+	return createIndexIfNotExists()
 }

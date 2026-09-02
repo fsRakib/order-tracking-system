@@ -8,19 +8,29 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /app
 
-# Copy and download dependencies first (better caching)
-COPY go.mod go.sum ./
-RUN go mod download && go mod verify
+# Copy the shared pb module
+COPY pb/go.mod pb/go.sum pb/
+COPY pb/order/ pb/order/
+COPY pb/stock/ pb/stock/
 
-# Copy source code
-COPY . .
+# Copy the order-service module
+COPY order-service/go.mod order-service/go.sum order-service/
 
-# Build the application with optimizations
+# Create a minimal go.work that only references modules available in this build
+RUN printf 'go 1.25.6\n\nuse (\n\t./order-service\n\t./pb\n)\n' > go.work
+
+# Download dependencies
+RUN cd order-service && go mod download
+
+# Copy full source
+COPY order-service/ order-service/
+
+# Build the application
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
     -o /app/order-service \
-    .
+    ./order-service/.
 
 # ============================================
 # FINAL STAGE - Minimal runtime image
@@ -32,7 +42,7 @@ LABEL maintainer="Order Tracking System" \
       version="1.0"
 
 # Install runtime dependencies
-RUN apk --no-cache add ca-certificates tzdata && \
+RUN apk --no-cache add ca-certificates tzdata netcat-openbsd && \
     # Create non-root user for security
     addgroup -g 1000 appgroup && \
     adduser -D -u 1000 -G appgroup appuser && \
@@ -51,9 +61,9 @@ USER appuser
 # Expose gRPC port
 EXPOSE 50051
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:50051 || exit 1
+# Health check - TCP probe (gRPC does not speak plain HTTP)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD nc -z localhost 50051 || exit 1
 
 # Run the application
 ENTRYPOINT ["./order-service"]

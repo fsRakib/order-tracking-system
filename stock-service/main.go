@@ -7,7 +7,7 @@ import (
 
 	"stock-service/consumer"
 	"stock-service/db"
-	pb "stock-service/pb/stock"
+	pb "order-tracking-system/pb/stock"
 	"stock-service/server"
 
 	"github.com/joho/godotenv"

@@ -8,19 +8,24 @@ RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /app
 
-# Copy and download dependencies first (better caching)
-COPY go.mod go.sum ./
-RUN go mod download && go mod verify
+# Copy analytics-service module files for dependency caching
+COPY analytics-service/go.mod analytics-service/go.sum analytics-service/
 
-# Copy source code
-COPY . .
+# Create a minimal go.work that only references analytics-service
+RUN printf 'go 1.25.6\n\nuse (\n\t./analytics-service\n)\n' > go.work
 
-# Build the application with optimizations
+# Download dependencies
+RUN cd analytics-service && go mod download
+
+# Copy full analytics-service source
+COPY analytics-service/ analytics-service/
+
+# Build the application from workspace root
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -ldflags='-w -s -extldflags "-static"' \
     -a -installsuffix cgo \
     -o /app/analytics-service \
-    .
+    ./analytics-service/.
 
 # ============================================
 # FINAL STAGE - Minimal runtime image
